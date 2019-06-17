@@ -11,10 +11,11 @@ module RubyAsterisk
   class AMI
     attr_accessor :host, :port, :connected, :timeout, :wait_time
 
-    def initialize(host, port)
+    def initialize(host, port, telnet_options = {Timeout: 10})
       self.host = host.to_s
       self.port = port.to_i
       self.connected = false
+      @telnet_options = telnet_options
       @timeout = 5
       @wait_time = 0.1
       @session = nil
@@ -22,9 +23,18 @@ module RubyAsterisk
 
     def connect
       begin
-        @session = Net::Telnet::new('Host' => self.host, 'Port' => self.port, 'Timeout' => 10)
+        h = {
+          Host: self.host,
+          Port: self.port
+        }.merge(@telnet_options)
+        final_h = {}
+        h.keys.each do |k|
+          final_h[k.to_s] = h[k]
+        end
+        @session = Net::Telnet::new(final_h)
         self.connected = true
       rescue Exception => ex
+        pp ex
         false
       end
     end
@@ -88,7 +98,7 @@ module RubyAsterisk
     def extension_state(exten, context, action_id = nil)
       execute 'ExtensionState', {'Exten' => exten, 'Context' => context, 'ActionID' => action_id}
     end
-    
+
     def device_state_list
       execute 'DeviceStateList'
     end
@@ -170,11 +180,11 @@ module RubyAsterisk
     def sip_peers
       execute 'SIPpeers'
     end
-    
+
     def sip_show_peer(peer)
       execute 'SIPshowpeer', {'Peer' => peer}
     end
-    
+
     def hangup(channel)
       execute 'Hangup', {'Channel' => channel}
     end
